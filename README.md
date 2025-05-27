@@ -12,6 +12,7 @@ A simple Neovim plugin to automatically save files on events like `InsertLeave`,
   priority = 1000,
   config = function()
     require("auto-save").setup({
+      delay = 500,
       delay_events = { "InsertLeave", "TextChanged" },
       instant_events = { "FocusLost", "BufLeave" },
     })
@@ -26,6 +27,7 @@ use({
   "prashanthbabu07/auto-save.nvim",
   config = function()
     require("auto-save").setup({
+      delay = 500
       delay_events = { "InsertLeave", "TextChanged" },
       instant_events = { "FocusLost", "BufLeave" },
     })

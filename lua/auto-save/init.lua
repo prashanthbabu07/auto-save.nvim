@@ -1,5 +1,10 @@
 local M = {}
 local autosave_timer = nil
+local config = {
+    delay = 500, -- default delay
+    delay_events = { "InsertLeave", "TextChanged" },
+    instant_events = {},
+}
 
 local function save_with_delay()
     if vim.bo.modified then
@@ -9,7 +14,7 @@ local function save_with_delay()
         autosave_timer = vim.defer_fn(function()
             vim.cmd("silent! write")
             vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
-        end, 500)
+        end, config.delay)
     end
 end
 
@@ -31,10 +36,11 @@ end
 --- Setup auto commands
 function M.setup(opts)
     opts = opts or {}
-    local delay_events = opts.delay_events or { "InsertLeave", "TextChanged" }
-    local instant_events = opts.instant_events or {} -- Optional
+    config.delay = opts.delay or config.delay
+    config.delay_events = opts.delay_events or config.delay_events
+    config.instant_events = opts.instant_events or config.instant_events
 
-    vim.api.nvim_create_autocmd(delay_events, {
+    vim.api.nvim_create_autocmd(config.delay_events, {
         pattern = "*",
         callback = save_with_delay,
         desc = "Auto-save with delay",
@@ -46,7 +52,7 @@ function M.setup(opts)
         desc = "Clear autosave timer before manual save",
     })
 
-    for _, evt in ipairs(instant_events) do
+    for _, evt in ipairs(config.instant_events) do
         vim.api.nvim_create_autocmd(evt, {
             pattern = "*",
             callback = auto_save,
