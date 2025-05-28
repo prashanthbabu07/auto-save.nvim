@@ -5,16 +5,52 @@ local config = {
     delay_events = { "InsertLeave", "TextChanged" },
     instant_events = {},
 }
+local last_saved_tick = {}
+
+local function is_real_buffer(bufnr)
+    return vim.api.nvim_buf_is_valid(bufnr)
+        and vim.api.nvim_buf_is_loaded(bufnr)
+        and vim.bo[bufnr].modifiable
+        and vim.bo[bufnr].buftype == ""
+end
+
+local function perform_save(bufnr)
+    if not is_real_buffer(bufnr) then
+        return
+    end
+
+    local current_tick = vim.api.nvim_buf_get_changedtick(bufnr)
+    if vim.bo[bufnr].modified and last_saved_tick[bufnr] ~= current_tick then
+        vim.cmd("silent! write")
+        last_saved_tick[bufnr] = current_tick
+        vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
+    end
+end
 
 local function save_with_delay()
-    if vim.bo.modified then
+    local bufnr = vim.api.nvim_get_current_buf()
+
+    if not is_real_buffer(bufnr) then
+        return
+    end
+
+    local current_tick = vim.api.nvim_buf_get_changedtick(bufnr)
+    if vim.bo.modified and last_saved_tick[bufnr] ~= current_tick then
         if autosave_timer then
             autosave_timer:stop()
         end
+
         autosave_timer = vim.defer_fn(function()
-            vim.cmd("silent! write")
-            vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
+            perform_save(bufnr)
         end, config.delay)
+
+        -- autosave_timer = vim.defer_fn(function()
+        --     if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
+        --         vim.cmd("silent! write")
+        --         last_saved_tick[bufnr] = vim.api.nvim_buf_get_changedtick(bufnr)
+        --         vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
+        --     end
+        -- end, config.delay)
     end
 end
 
@@ -25,12 +61,25 @@ local function clear_timer()
     end
 end
 
---- Optional: Immediate save on specific events
 local function auto_save()
-    if vim.bo.modifiable and vim.bo.modified then
-        vim.cmd("silent! write")
-        vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
+    if autosave_timer then
+        autosave_timer:stop()
+        autosave_timer = nil
     end
+    -- local bufnr = vim.api.nvim_get_current_buf()
+    --
+    -- if not is_real_buffer(bufnr) then
+    --     return
+    -- end
+    --
+    -- if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
+    --     local current_tick = vim.api.nvim_buf_get_changedtick(bufnr)
+    --     if vim.bo.modifiable and vim.bo.modified and (last_saved_tick[bufnr] ~= current_tick) then
+    --         vim.cmd("silent! write")
+    --         last_saved_tick[bufnr] = current_tick
+    --         vim.api.nvim_echo({ { "Auto-saved!", "None" } }, false, {})
+    --     end
+    -- end
 end
 
 --- Setup auto commands
